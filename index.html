@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Labirint Soqqa O‘yini</title>
+    <title>Labirint Soqqa - Bosqichli O'yin</title>
     <style>
         * {
             box-sizing: border-box;
@@ -23,14 +23,20 @@
             overflow: hidden;
         }
         h1 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
+            font-size: 1.4rem;
+            margin-bottom: 2px;
             color: #00ffcc;
             text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
         }
+        #score-board {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: #ff3366;
+            font-weight: bold;
+        }
         #info {
-            font-size: 0.85rem;
-            margin-bottom: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
             color: #b8b8d2;
             text-align: center;
             padding: 0 20px;
@@ -92,13 +98,14 @@
 <body>
 
     <h1>Labirint Soqqa</h1>
+    <div id="score-board">Bosqich (Level): <span id="level-num">1</span></div>
     <div id="info">Telefonni eging va soqqani markazdagi qizil nuqtaga olib boring!</div>
 
     <div id="game-container">
         <canvas id="gameCanvas" width="350" height="350"></canvas>
         <div id="win-message">
             Tabriklayman! 🏆
-            <span>G‘alaba qozongiz!</span>
+            <span id="next-text">Keyingi bosqichga o'tish...</span>
         </div>
     </div>
 
@@ -109,10 +116,14 @@
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("start-btn");
         const winMessage = document.getElementById("win-message");
+        const levelNumEl = document.getElementById("level-num");
+
+        let currentLevel = 1;
+        const maxLevel = 5;
 
         let ball = {
-            x: 30,
-            y: 30,
+            x: 25,
+            y: 25,
             radius: 8,
             vx: 0,
             vy: 0,
@@ -120,30 +131,49 @@
         };
 
         const target = {
-            x: 315,
-            y: 315,
+            x: 325,
+            y: 325,
             radius: 12
         };
 
-        const walls = [
-            {x: 0, y: 0, w: 350, h: 15},
-            {x: 0, y: 0, w: 15, h: 350},
-            {x: 335, y: 0, w: 15, h: 350},
-            {x: 0, y: 335, w: 350, h: 15},
-            
-            {x: 60, y: 0, w: 15, h: 100},
-            {x: 60, y: 160, w: 15, h: 120},
-            {x: 120, y: 60, w: 15, h: 220},
-            {x: 180, y: 120, w: 100, h: 15},
-            {x: 180, y: 180, w: 15, h: 110},
-            {x: 240, y: 60, w: 80, h: 15},
-            {x: 240, y: 120, w: 15, h: 120},
-            {x: 280, y: 240, w: 55, h: 15}
-        ];
-
+        let walls = [];
         let tiltX = 0;
         let tiltY = 0;
         let gameActive = false;
+
+        // Bosqichga qarab tasodifiy labirint generatori
+        function generateMaze(level) {
+            walls = [];
+            
+            // Tashqi devorlar doimiy
+            walls.push({x: 0, y: 0, w: 350, h: 12});
+            walls.push({x: 0, y: 0, w: 12, h: 350});
+            walls.push({x: 338, y: 0, w: 12, h: 350});
+            walls.push({x: 0, y: 338, w: 350, h: 12});
+
+            // Bosqich qanchalik baland bo'lsa, devorlar shunchalik ko'payadi va qiyinlashadi
+            let wallCount = 4 + level * 3; 
+            
+            // Random generator uchun sobit mantiq o'rniga erkin to'siqlar
+            for (let i = 0; i < wallCount; i++) {
+                let w = Math.random() > 0.5 ? (40 + Math.random() * 80) : 15;
+                let h = w === 15 ? (50 + Math.random() * 90) : 15;
+                
+                let x = 30 + Math.random() * (270 - w);
+                let y = 30 + Math.random() * (270 - h);
+
+                // Start va target (nishon) joyiga devor tushib qolishining oldini olish
+                if ((x < 70 && y < 70) || (x > 260 && y > 260)) continue;
+
+                walls.push({x: x, y: y, w: w, h: h});
+            }
+
+            // To'pni har safar boshiga qaytarish
+            ball.x = 25;
+            ball.y = 25;
+            ball.vx = 0;
+            ball.vy = 0;
+        }
 
         function checkCollision(nx, ny) {
             for (let wall of walls) {
@@ -173,18 +203,33 @@
             let distToTarget = Math.sqrt(Math.pow(ball.x - target.x, 2) + Math.pow(ball.y - target.y, 2));
             if (distToTarget < ball.radius + target.radius - 4) {
                 gameActive = false;
-                winMessage.style.display = 'flex';
+                
+                if (currentLevel < maxLevel) {
+                    winMessage.style.display = 'flex';
+                    setTimeout(() => {
+                        currentLevel++;
+                        levelNumEl.innerText = currentLevel;
+                        generateMaze(currentLevel);
+                        winMessage.style.display = 'none';
+                        gameActive = true;
+                    }, 2000);
+                } else {
+                    document.getElementById('next-text').innerText = "Tabriklayman, Barcha bosqichlarni tugatdingiz! 🌟";
+                    winMessage.style.display = 'flex';
+                }
             }
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Devorlarni chizish
             ctx.fillStyle = '#3d3d6b';
             for (let wall of walls) {
                 ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
             }
 
+            // Nishonni chizish
             ctx.beginPath();
             ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#ff3366';
@@ -194,6 +239,7 @@
             ctx.closePath();
             ctx.shadowBlur = 0;
 
+            // Soqqani chizish
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#00ffcc';
@@ -210,6 +256,7 @@
             requestAnimationFrame(loop);
         }
 
+        // Kompyuter uchun strelka tugmalari
         window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') tiltX = -3;
             if (e.key === 'ArrowRight') tiltX = 3;
@@ -222,7 +269,8 @@
         });
 
         startBtn.addEventListener('click', () => {
-            // iOS (iPhone) qurilmalari uchun ruxsat so'rash
+            generateMaze(currentLevel);
+            
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(response => {
@@ -235,7 +283,6 @@
                         }
                     }).catch(console.error);
             } else {
-                // Android va boshqa qurilmalar uchun
                 window.addEventListener('deviceorientation', handleOrientation);
                 startBtn.style.display = 'none';
                 gameActive = true;
@@ -247,6 +294,7 @@
             if (event.beta !== null) tiltY = event.beta / 3;
         }
 
+        generateMaze(currentLevel);
         draw();
         loop();
     </script>
