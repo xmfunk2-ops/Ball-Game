@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Labirint Soqqa O‘yini</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #2d2b55);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: #00ffcc;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+        }
+        #info {
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            color: #b8b8d2;
+            text-align: center;
+            padding: 0 20px;
+        }
+        #game-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            background: #11111d;
+            border: 4px solid #00ffcc;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background: #181829;
+        }
+        #start-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: #00ffcc;
+            color: #11111d;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.4);
+            transition: 0.2s;
+        }
+        #start-btn:active {
+            transform: scale(0.95);
+        }
+        #win-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #00ffcc;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+        }
+        #win-message span {
+            font-size: 1rem;
+            color: #fff;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Labirint Soqqa</h1>
+    <div id="info">Telefonni eging va soqqani markazdagi qizil nuqtaga olib boring!</div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="350" height="350"></canvas>
+        <div id="win-message">
+            Tabriklayman! 🏆
+            <span>G‘alaba qozongiz!</span>
+        </div>
+    </div>
+
+    <button id="start-btn">O'yinni Boshlash</button>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const startBtn = document.getElementById("start-btn");
+        const winMessage = document.getElementById("win-message");
+
+        let ball = {
+            x: 30,
+            y: 30,
+            radius: 8,
+            vx: 0,
+            vy: 0,
+            speed: 0.35
+        };
+
+        const target = {
+            x: 315,
+            y: 315,
+            radius: 12
+        };
+
+        const walls = [
+            {x: 0, y: 0, w: 350, h: 15},
+            {x: 0, y: 0, w: 15, h: 350},
+            {x: 335, y: 0, w: 15, h: 350},
+            {x: 0, y: 335, w: 350, h: 15},
+            
+            {x: 60, y: 0, w: 15, h: 100},
+            {x: 60, y: 160, w: 15, h: 120},
+            {x: 120, y: 60, w: 15, h: 220},
+            {x: 180, y: 120, w: 100, h: 15},
+            {x: 180, y: 180, w: 15, h: 110},
+            {x: 240, y: 60, w: 80, h: 15},
+            {x: 240, y: 120, w: 15, h: 120},
+            {x: 280, y: 240, w: 55, h: 15}
+        ];
+
+        let tiltX = 0;
+        let tiltY = 0;
+        let gameActive = false;
+
+        function checkCollision(nx, ny) {
+            for (let wall of walls) {
+                let closestX = Math.max(wall.x, Math.min(nx, wall.x + wall.w));
+                let closestY = Math.max(wall.y, Math.min(ny, wall.y + wall.h));
+                let distX = nx - closestX;
+                let distY = ny - closestY;
+                if (Math.sqrt((distX * distX) + (distY * distY)) < ball.radius) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            ball.vx = tiltX * ball.speed;
+            ball.vy = tiltY * ball.speed;
+
+            let nextX = ball.x + ball.vx;
+            let nextY = ball.y + ball.vy;
+
+            if (!checkCollision(nextX, ball.y)) ball.x = nextX;
+            if (!checkCollision(ball.x, nextY)) ball.y = nextY;
+
+            let distToTarget = Math.sqrt(Math.pow(ball.x - target.x, 2) + Math.pow(ball.y - target.y, 2));
+            if (distToTarget < ball.radius + target.radius - 4) {
+                gameActive = false;
+                winMessage.style.display = 'flex';
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#3d3d6b';
+            for (let wall of walls) {
+                ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+            }
+
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff3366';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff3366';
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#00ffcc';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#00ffcc';
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') tiltX = -3;
+            if (e.key === 'ArrowRight') tiltX = 3;
+            if (e.key === 'ArrowUp') tiltY = -3;
+            if (e.key === 'ArrowDown') tiltY = 3;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (['ArrowLeft', 'ArrowRight'].includes(e.key)) tiltX = 0;
+            if (['ArrowUp', 'ArrowDown'].includes(e.key)) tiltY = 0;
+        });
+
+        startBtn.addEventListener('click', () => {
+            // iOS (iPhone) qurilmalari uchun ruxsat so'rash
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            startBtn.style.display = 'none';
+                            gameActive = true;
+                        } else {
+                            alert("Giroskop uchun ruxsat berilmadi!");
+                        }
+                    }).catch(console.error);
+            } else {
+                // Android va boshqa qurilmalar uchun
+                window.addEventListener('deviceorientation', handleOrientation);
+                startBtn.style.display = 'none';
+                gameActive = true;
+            }
+        });
+
+        function handleOrientation(event) {
+            if (event.gamma !== null) tiltX = event.gamma / 3;
+            if (event.beta !== null) tiltY = event.beta / 3;
+        }
+
+        draw();
+        loop();
+    </script>
+</body>
+</html>
