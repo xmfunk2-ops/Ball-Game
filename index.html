@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Labirint Soqqa - Bosqichli O'yin</title>
+    <title>Cheksiz Labirint Soqqa</title>
     <style>
         * {
             box-sizing: border-box;
@@ -104,8 +104,8 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="350" height="350"></canvas>
         <div id="win-message">
-            Tabriklayman! 🏆
-            <span id="next-text">Keyingi bosqichga o'tish...</span>
+            Ajoyib! 🏆
+            <span id="next-text">Keyingi murakkab bosqichga o'tish...</span>
         </div>
     </div>
 
@@ -119,7 +119,6 @@
         const levelNumEl = document.getElementById("level-num");
 
         let currentLevel = 1;
-        const maxLevel = 5;
 
         let ball = {
             x: 25,
@@ -141,7 +140,7 @@
         let tiltY = 0;
         let gameActive = false;
 
-        // Bosqichga qarab tasodifiy labirint generatori
+        // Cheksiz va qiyinlashib boruvchi labirint generatori
         function generateMaze(level) {
             walls = [];
             
@@ -151,28 +150,33 @@
             walls.push({x: 338, y: 0, w: 12, h: 350});
             walls.push({x: 0, y: 338, w: 350, h: 12});
 
-            // Bosqich qanchalik baland bo'lsa, devorlar shunchalik ko'payadi va qiyinlashadi
-            let wallCount = 4 + level * 3; 
-            
-            // Random generator uchun sobit mantiq o'rniga erkin to'siqlar
+            // Level oshgani sayin devorlar soni ko'payib boradi (cheksiz ravishda)
+            // Har 5 ta levelda devorlar qalinligi yupqalashib, zichroq to'siqlar hosil qiladi
+            let wallCount = 5 + level * 2; 
+
             for (let i = 0; i < wallCount; i++) {
-                let w = Math.random() > 0.5 ? (40 + Math.random() * 80) : 15;
-                let h = w === 15 ? (50 + Math.random() * 90) : 15;
+                // Level oshgani sari devorlar o'lchami o'zgarib, tor yo'laklar hosil qiladi
+                let w = Math.random() > 0.4 ? (30 + Math.random() * 70) : 14;
+                let h = w === 14 ? (40 + Math.random() * 80) : 14;
                 
                 let x = 30 + Math.random() * (270 - w);
                 let y = 30 + Math.random() * (270 - h);
 
-                // Start va target (nishon) joyiga devor tushib qolishining oldini olish
-                if ((x < 70 && y < 70) || (x > 260 && y > 260)) continue;
+                // Start (0,0) va Target (350,350) atrofi to'sib qo'yilishining oldini olamiz
+                if ((x < 75 && y < 75) || (x > 250 && y > 250)) continue;
 
                 walls.push({x: x, y: y, w: w, h: h});
             }
 
-            // To'pni har safar boshiga qaytarish
+            // To'pni boshlang'ich nuqtaga qaytarish
             ball.x = 25;
             ball.y = 25;
             ball.vx = 0;
             ball.vy = 0;
+
+            // Qiyinchilik: Level oshgan sari to'pning tezlik reaksiyasi biroz kuchayadi (boshqarish qiyinlashadi)
+            // Lekin haddan tashqari tezlashib ketmasligi uchun cheklab qo'yamiz
+            ball.speed = 0.35 + Math.min(level * 0.03, 0.4);
         }
 
         function checkCollision(nx, ny) {
@@ -203,20 +207,16 @@
             let distToTarget = Math.sqrt(Math.pow(ball.x - target.x, 2) + Math.pow(ball.y - target.y, 2));
             if (distToTarget < ball.radius + target.radius - 4) {
                 gameActive = false;
-                
-                if (currentLevel < maxLevel) {
-                    winMessage.style.display = 'flex';
-                    setTimeout(() => {
-                        currentLevel++;
-                        levelNumEl.innerText = currentLevel;
-                        generateMaze(currentLevel);
-                        winMessage.style.display = 'none';
-                        gameActive = true;
-                    }, 2000);
-                } else {
-                    document.getElementById('next-text').innerText = "Tabriklayman, Barcha bosqichlarni tugatdingiz! 🌟";
-                    winMessage.style.display = 'flex';
-                }
+                winMessage.style.display = 'flex';
+
+                // 1.5 soniyadan keyin keyingi cheksiz bosqichga o'tish
+                setTimeout(() => {
+                    currentLevel++;
+                    levelNumEl.innerText = currentLevel;
+                    generateMaze(currentLevel);
+                    winMessage.style.display = 'none';
+                    gameActive = true;
+                }, 1500);
             }
         }
 
